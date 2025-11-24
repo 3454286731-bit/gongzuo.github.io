@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文本数据存储</title>
+  <!-- 引入Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入Font Awesome -->
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <!-- 配置Tailwind自定义主题 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3b82f6',
+            secondary: '#64748b',
+            accent: '#10b981',
+            neutral: '#f8fafc',
+            dark: '#1e293b'
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+
+  <!-- 自定义工具类 -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .transition-all-300 {
+        transition: all 300ms ease-in-out;
+      }
+    }
+  </style>
+
+  <style>
+    /* 全局样式 */
+    body {
+      background-color: #f1f5f9;
+      background-image:
+        radial-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+        radial-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+      background-size: 50px 50px;
+      background-position: 0 0, 25px 25px;
+    }
+
+    /* 文本区域动画 */
+    .text-area:focus {
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    /* 按钮悬停效果 */
+    .btn {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: all 0.6s ease;
+    }
+
+    .btn:hover:after {
+      left: 100%;
+    }
+  </style>
+</head>
+<body class="min-h-screen font-sans text-dark">
+  <div class="container mx-auto px-4 py-8 max-w-5xl">
+    <!-- 页面标题 -->
+    <header class="mb-8 text-center">
+      <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-primary text-shadow mb-2">
+        <i class="fa fa-file-text-o mr-2" aria-hidden="true"></i>文本数据存储
+      </h1>
+      <p class="text-secondary text-[clamp(1rem,2vw,1.1rem)]">
+        安全存储您的文本数据，数据保存在本地浏览器中
+      </p>
+    </header>
+
+    <!-- 主要内容区 -->
+    <main class="bg-white rounded-xl shadow-lg p-6 md:p-8 transform transition-all duration-300 hover:shadow-xl">
+      <!-- 操作按钮区 -->
+      <div class="flex flex-wrap gap-3 mb-6">
+        <button id="saveBtn" class="btn bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center transition-all-300">
+          <i class="fa fa-save mr-2" aria-hidden="true"></i>保存文本
+        </button>
+        <button id="loadBtn" class="btn bg-secondary hover:bg-secondary/90 text-white px-4 py-2 rounded-lg flex items-center transition-all-300">
+          <i class="fa fa-load mr-2" aria-hidden="true"></i>加载文本
+        </button>
+        <button id="clearBtn" class="btn bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center transition-all-300">
+          <i class="fa fa-trash mr-2" aria-hidden="true"></i>清空文本
+        </button>
+        <button id="downloadBtn" class="btn bg-accent hover:bg-accent/90 text-white px-4 py-2 rounded-lg flex items-center transition-all-300 ml-auto">
+          <i class="fa fa-download mr-2" aria-hidden="true"></i>下载文本
+        </button>
+      </div>
+
+      <!-- 文本输入区域 -->
+      <div class="relative mb-6">
+        <textarea
+          id="textArea"
+          class="text-area w-full h-[clamp(200px,50vh,400px)] p-4 rounded-lg border border-gray-200 focus:border-primary focus:outline-none resize-none transition-all-300"
+          placeholder="在这里输入或粘贴您的文本数据..."></textarea>
+      </div>
+
+      <!-- 文本统计信息 -->
+      <div class="bg-neutral rounded-lg p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="flex items-center">
+          <i class="fa fa-file-word-o text-primary mr-2 text-xl" aria-hidden="true"></i>
+          <div>
+            <p class="text-sm text-secondary">字数</p>
+            <p id="wordCount" class="font-semibold">0</p>
+          </div>
+        </div>
+        <div class="flex items-center">
+          <i class="fa fa-font text-primary mr-2 text-xl" aria-hidden="true"></i>
+          <div>
+            <p class="text-sm text-secondary">字符数 (含空格)</p>
+            <p id="charCount" class="font-semibold">0</p>
+          </div>
+        </div>
+        <div class="flex items-center">
+          <i class="fa fa-clock-o text-primary mr-2 text-xl" aria-hidden="true"></i>
+          <div>
+            <p class="text-sm text-secondary">最后保存</p>
+            <p id="lastSaved" class="font-semibold">未保存</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 提示信息 -->
+    <div id="notification" class="fixed bottom-6 right-6 bg-dark text-white px-6 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-500 flex items-center">
+      <i id="notificationIcon" class="fa mr-2" aria-hidden="true"></i>
+      <span id="notificationText"></span>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="mt-12 text-center text-secondary text-sm">
+      <p>© 2025 文本数据存储 | 数据仅保存在本地浏览器中，不会上传至服务器</p>
+    </footer>
+  </div>
+
+  <script>
+    // DOM元素
+    const textArea = document.getElementById('textArea');
+    const saveBtn = document.getElementById('saveBtn');
+    const loadBtn = document.getElementById('loadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const wordCount = document.getElementById('wordCount');
+    const charCount = document.getElementById('charCount');
+    const lastSaved = document.getElementById('lastSaved');
+    const notification = document.getElementById('notification');
+    const notificationIcon = document.getElementById('notificationIcon');
+    const notificationText = document.getElementById('notificationText');
+
+    // 本地存储键名
+    const STORAGE_KEY = 'savedTextData';
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      // 加载保存的文本
+      loadSavedText();
+      // 更新文本统计
+      updateTextStats();
+      // 绑定事件监听
+      bindEventListeners();
+    });
+
+    // 绑定事件监听
+    function bindEventListeners() {
+      // 文本区域输入事件
+      textArea.addEventListener('input', updateTextStats);
+
+      // 保存按钮点击事件
+      saveBtn.addEventListener('click', saveText);
+
+      // 加载按钮点击事件
+      loadBtn.addEventListener('click', loadSavedText);
+
+      // 清空按钮点击事件
+      clearBtn.addEventListener('click', clearText);
+
+      // 下载按钮点击事件
+      downloadBtn.addEventListener('click', downloadText);
+    }
+
+    // 保存文本到本地存储
+    function saveText() {
+      const text = textArea.value.trim();
+
+      if (!text) {
+        showNotification('警告', '文本内容不能为空', 'fa-exclamation-triangle', 'text-amber-400');
+        return;
+      }
+
+      try {
+        const data = {
+          text: text,
+          timestamp: new Date().toISOString()
+        };
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+        // 更新最后保存时间
+        const formattedTime = formatDateTime(data.timestamp);
+        lastSaved.textContent = formattedTime;
+
+        showNotification('成功', '文本已成功保存', 'fa-check-circle', 'text-green-400');
+      } catch (error) {
+        showNotification('错误', '保存失败: ' + error.message, 'fa-exclamation-circle', 'text-red-400');
+      }
+    }
+
+    // 从本地存储加载文本
+    function loadSavedText() {
+      try {
+        const savedData = localStorage.getItem(STORAGE_KEY);
+
+        if (savedData) {
+          const data = JSON.parse(savedData);
+          textArea.value = data.text;
+
+          // 更新最后保存时间
+          const formattedTime = formatDateTime(data.timestamp);
+          lastSaved.textContent = formattedTime;
+
+          showNotification('成功', '已加载保存的文本', 'fa-check-circle', 'text-green-400');
+        } else {
+          showNotification('提示', '没有找到保存的文本', 'fa-info-circle', 'text-blue-400');
+        }
+      } catch (error) {
+        showNotification('错误', '加载失败: ' + error.message, 'fa-exclamation-circle', 'text-red-400');
+      }
+    }
+
+    // 清空文本区域
+    function clearText() {
+      if (textArea.value.trim()) {
+        if (confirm('确定要清空所有文本吗？此操作不可撤销。')) {
+          textArea.value = '';
+          updateTextStats();
+          showNotification('提示', '文本已清空', 'fa-info-circle', 'text-blue-400');
+        }
+      } else {
+        showNotification('提示', '文本区域已为空', 'fa-info-circle', 'text-blue-400');
+      }
+    }
+
+    // 下载文本文件
+    function downloadText() {
+      const text = textArea.value.trim();
+
+      if (!text) {
+        showNotification('警告', '没有可下载的文本内容', 'fa-exclamation-triangle', 'text-amber-400');
+        return;
+      }
+
+      // 创建blob对象
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+
+      // 创建下载链接
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `文本数据_${formatDateForFilename(new Date())}.txt`;
+      document.body.appendChild(a);
+
+      // 触发下载
+      a.click();
+
+      // 清理
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 0);
+
+      showNotification('成功', '文本已开始下载', 'fa-download', 'text-green-400');
+    }
+
+    // 更新文本统计信息
+    function updateTextStats() {
+      const text = textArea.value;
+
+      // 计算字符数（含空格）
+      const charLength = text.length;
+      charCount.textContent = charLength;
+
+      // 计算字数（不含空格和空行）
+      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      wordCount.textContent = words;
+    }
+
+    // 显示通知
+    function showNotification(title, message, iconClass, iconColor) {
+      notificationIcon.className = `fa ${iconClass} mr-2 ${iconColor}`;
+      notificationText.innerHTML = `<strong>${title}:</strong> ${message}`;
+
+      // 显示通知
+      notification.classList.remove('translate-y-20', 'opacity-0');
+      notification.classList.add('translate-y-0', 'opacity-100');
+
+      // 3秒后隐藏通知
+      setTimeout(() => {
+        notification.classList.remove('translate-y-0', 'opacity-100');
+        notification.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    // 格式化日期时间（显示用）
+    function formatDateTime(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+
+    // 格式化日期（文件名用）
+    function formatDateForFilename(date) {
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }).replace(/[\/:\s]/g, '-');
+    }
+  </script>
+</body>
+</html>
